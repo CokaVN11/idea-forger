@@ -12,6 +12,7 @@ import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
+import { MarkdownView } from "./markdown-view";
 import { NativeSelect } from "./ui/native-select";
 import { useApp } from "../lib/context";
 import { KINDS, OUT_KINDS } from "../lib/messages";
@@ -322,19 +323,7 @@ export function ExternalLink({
   );
 }
 export function BodyText({ text }: { text: string }) {
-  return (
-    <div className="body-text">
-      {text.split(/(https?:\/\/[^\s<>]+)/g).map((part, i) =>
-        /^https?:\/\//.test(part) ? (
-          <ExternalLink key={i} href={part}>
-            {part}
-          </ExternalLink>
-        ) : (
-          part
-        ),
-      )}
-    </div>
-  );
+  return <MarkdownView text={text} />;
 }
 export function NoteItem({ note }: { note: Note }) {
   const { kindLabel, t, lang } = useApp();

@@ -13,7 +13,8 @@ import {
   TagsField,
   TextField,
 } from "../components/shared";
-import type { FormEvent } from "react";
+import { importFiles } from "../lib/import-files";
+import type { ChangeEvent, FormEvent } from "react";
 export function Capture({ query }: { query: URLSearchParams }) {
   const { t, notify, refresh } = useApp();
   const { busy, run } = useTask();
@@ -42,6 +43,24 @@ export function Capture({ query }: { query: URLSearchParams }) {
       ).join(", ");
       (form.elements.namedItem("body") as HTMLTextAreaElement).focus();
       history.replaceState(null, "", "#/capture");
+    });
+  }
+  function importPicked(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const files = [...(input.files ?? [])];
+    input.value = "";
+    if (!files.length) return;
+    void run(async () => {
+      const results = await importFiles(files);
+      const count = (s: string) => results.filter((r) => r.status === s).length;
+      const failed = results.filter((r) => r.status === "failed");
+      notify(
+        t("import_done", { ok: count("ok"), skipped: count("skipped"), failed: failed.length }) +
+          failed
+            .map((r) => ` · ${r.name}: ${r.error === "no_text" ? t("import_no_text") : r.error}`)
+            .join(""),
+      );
+      refresh();
     });
   }
   return (
@@ -102,6 +121,19 @@ export function Capture({ query }: { query: URLSearchParams }) {
             </div>
           </fieldset>
         </form>
+        <div className="import-row">
+          <label className="small muted" htmlFor="import-files">
+            {t("import_label")}
+          </label>
+          <Input
+            id="import-files"
+            type="file"
+            accept=".md,.markdown,.pdf"
+            multiple
+            disabled={busy}
+            onChange={importPicked}
+          />
+        </div>
       </Panel>
     </>
   );
