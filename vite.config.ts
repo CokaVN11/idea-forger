@@ -32,14 +32,14 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       cloudflare({
         config: deploy
-          ? (config) => ({
-              account_id: accountId,
-              d1_databases: config.d1_databases?.map((database) =>
-                database.binding === "DB"
-                  ? { ...database, database_id: databaseId }
-                  : database,
-              ),
-            })
+          ? (config) => {
+              // Returning an array override concatenates bindings. Edit the existing binding instead.
+              config.account_id = accountId;
+              for (const database of config.d1_databases ?? []) {
+                if (database.binding === "DB")
+                  database.database_id = databaseId;
+              }
+            }
           : undefined,
       }),
     ],

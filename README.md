@@ -109,7 +109,7 @@ Workflow `.github/workflows/ci.yml` chạy khi:
 - Có push lên `main`.
 - Được chạy thủ công qua `workflow_dispatch`.
 
-Các bước kiểm tra gồm cài dependency bằng `npm ci`, kiểm tra chặn deploy sai cấu hình, typecheck/build, áp dụng migration D1 local và đóng gói deploy bằng `wrangler deploy --dry-run`. Workflow không cần secret Cloudflare và không ghi vào database production.
+Các bước kiểm tra gồm cài dependency bằng `npm ci`, kiểm tra chặn deploy sai cấu hình, typecheck/build, áp dụng migration D1 local và đóng gói deploy bằng `wrangler deploy --dry-run`, và build production với ID giả để kiểm tra cấu hình mà không truy cập tài nguyên thật. Workflow không cần secret Cloudflare và không ghi vào database production.
 
 ### Cloudflare Workers Builds
 
@@ -146,7 +146,7 @@ Chỉ thêm migration mới theo thứ tự, không sửa migration đã chạy.
 | `npm run deploy`            | Build, migrate remote và deploy                              |
 | `npm run deploy:ci`         | Migrate remote và deploy bản đã build                        |
 
-Wrangler dùng cấu hình deploy do Vite tạo thông qua `.wrangler/deploy/config.json`. Sau khi sửa cấu hình nguồn hoặc biến deploy, chạy lại `npm run build:production` trước khi deploy. Không chỉnh trực tiếp file trong `dist/`.
+Các script remote đọc đường dẫn cấu hình do Vite tạo từ `.wrangler/deploy/config.json`, kiểm tra ID và truyền rõ `--config` cho cả migration lẫn deploy. Lệnh D1 chạy trực tiếp có thể đọc lại cấu hình mẫu ở thư mục gốc. Sau khi sửa cấu hình nguồn hoặc biến deploy, chạy lại `npm run build:production` trước khi deploy. Không chỉnh trực tiếp file trong `dist/`.
 
 Thêm component shadcn/ui khi cần:
 

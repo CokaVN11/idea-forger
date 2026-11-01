@@ -41,3 +41,8 @@ jobs:
         run: npm run db:migrate:local
       - name: Validate deployment bundle
         run: npx wrangler deploy --dry-run
+      - name: Validate production config with synthetic identifiers
+        env:
+          CLOUDFLARE_ACCOUNT_ID: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          CLOUDFLARE_D1_DATABASE_ID: 11111111-1111-4111-8111-111111111111
+        run: npm run build:production && node scripts/check-deploy-config.mjs --dry-run
