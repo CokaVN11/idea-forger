@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { api, formBody, go } from "../lib/api";
 import { useApp, useDebounced, useResource, useTask } from "../lib/context";
 import type { Note, NoteDetail, NoteLink, Output, Tag } from "../lib/types";
@@ -6,6 +6,7 @@ import {
   AreaField,
   Badge,
   Button,
+  DeleteButton,
   Field,
   Heading,
   Input,
@@ -36,8 +37,49 @@ export function NotePage({ id }: { id: number }) {
   const [selected, setSelected] = useState<Pick<Note, "id" | "title"> | null>(
     null,
   );
+  // AI draft merged over the form's current values; `rev` remounts the uncontrolled form to apply it.
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [rev, setRev] = useState(0);
+  const formEl = useRef<HTMLFormElement>(null);
+  const [reasons, setReasons] = useState<Record<number, string>>({});
   if (!data) return <ResourceState error={error} />;
   const note = data.note;
+  const attachable =
+    allOutputs?.outputs.filter(
+      (output) => !data.outputs.some((item) => item.id === output.id),
+    ) ?? [];
+  const v =(field: keyof Note) =>
+    draft[field] ??
+    (field === "tags" ? note.tags.join(", ") : String(note[field] ?? ""));
+  const aiDistill = () => {
+    // Read the form before run() disables the fieldset: disabled fields drop out of FormData.
+    const current = formBody(formEl.current!);
+    void run(async () => {
+      const { draft: ai } = await api<{ draft: Record<string, string | string[]> }>(
+        `/notes/${id}/distill`,
+        "POST",
+      );
+      const merged: Record<string, string> = {};
+      for (const [key, value] of Object.entries(current))
+        merged[key] = Array.isArray(value) ? value.join(", ") : String(value);
+      for (const [key, value] of Object.entries(ai))
+        if (key !== "tags" && key !== "kind" && value) merged[key] = String(value);
+      merged.tags = [
+        ...new Set([...(current.tags as string[]), ...(ai.tags as string[])]),
+      ].join(", ");
+      setDraft(merged);
+      setRev((n) => n + 1);
+      notify(t("ai_distill_done"));
+    });
+  };
+  const aiConnect = () =>
+    void run(async () => {
+      const { suggestions: out } = await api<{
+        suggestions: { id: number; reason: string }[];
+      }>(`/notes/${id}/connect`, "POST");
+      setReasons(Object.fromEntries(out.map((item) => [item.id, item.reason])));
+      notify(t("ai_connect_done"));
+    });
   const mutate = (task: () => Promise<unknown>) =>
     void run(async () => {
       await task();
@@ -53,6 +95,7 @@ export function NotePage({ id }: { id: number }) {
       body.stage = "distilled";
     mutate(async () => {
       await api(`/notes/${id}`, "PATCH", body);
+      setDraft({});
       notify(t("saved"));
     });
   }
@@ -79,7 +122,9 @@ export function NotePage({ id }: { id: number }) {
     <>
       <Heading
         title={note.title}
-        subtitle={`#${id} · ${t(`st_${note.stage}`)}`}
+        subtitle={`#${id} · ${t(`st_${note.stage}`)} · ${t("next_review")}: ${
+          note.review_due ? fmtDate(note.review_due, lang) : t("never")
+        } (${note.review_count} ${t("times")})`}
       >
         <div className="row">
           <Button
@@ -113,65 +158,65 @@ export function NotePage({ id }: { id: number }) {
       </Heading>
       <div className="split">
         <Panel>
-          <form onSubmit={submit}>
+          <form key={rev} ref={formEl} onSubmit={submit}>
             <fieldset disabled={busy}>
-              <div className="grid-2">
-                <TextField field="title" value={note.title} />
-                <KindField value={note.kind} />
-              </div>
-              <AreaField field="summary" value={note.summary} />
-              <AreaField field="why_matters" value={note.why_matters} />
-              <AreaField field="body" rows={6} value={note.body} />
-              <div className="grid-2">
-                <TextField
-                  field="source_url"
-                  type="url"
-                  value={note.source_url}
-                />
-                <TextField field="source_title" value={note.source_title} />
-                <TagsField
-                  value={note.tags.join(", ")}
-                  tags={tags?.tags.map((tag) => tag.name)}
-                />
-                <TextField
-                  field="learned_at"
-                  type="date"
-                  value={note.learned_at}
-                />
-                <ParaField value={note.para} />
-                <TextField field="para_ref" value={note.para_ref} />
-              </div>
-              <TextField field="next_action" value={note.next_action} />
-              <div className="row">
-                <SaveButton />
-                <>
+              <TextField field="title" value={v("title")} />
+              <AreaField field="summary" value={v("summary")} />
+              <AreaField field="why_matters" value={v("why_matters")} />
+              <AreaField field="body" rows={6} value={v("body")} />
+              <TextField field="next_action" value={v("next_action")} />
+              {/* Opened after an AI draft so filled-in tags/PARA stay visible. */}
+              <details className="capture-extras" open={rev > 0}>
+                <summary>{t("capture_extras")}</summary>
+                <div className="grid-2">
+                  <KindField value={v("kind")} />
+                  <TagsField
+                    value={v("tags")}
+                    tags={tags?.tags.map((tag) => tag.name)}
+                  />
+                  <TextField
+                    field="source_url"
+                    type="url"
+                    value={v("source_url")}
+                  />
+                  <TextField field="source_title" value={v("source_title")} />
+                  <TextField
+                    field="learned_at"
+                    type="date"
+                    value={v("learned_at")}
+                  />
+                  <ParaField value={v("para")} />
+                  <TextField field="para_ref" value={v("para_ref")} />
+                </div>
+              </details>
+              <div className="row between">
+                <div className="row">
+                  <SaveButton />
                   {note.stage === "inbox" && (
                     <SaveButton name="distill" variant="outline">
                       {t("do_distill")}
                     </SaveButton>
                   )}
-                </>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => {
-                    if (confirm(t("confirm_del")))
-                      mutate(async () => {
-                        await api(`/notes/${id}`, "DELETE");
-                        go("/library");
-                      });
-                  }}
-                >
-                  {t("del")}
-                </Button>
+                  <Button type="button" variant="outline" onClick={aiDistill}>
+                    {t("ai_distill")}
+                  </Button>
+                </div>
+                <DeleteButton
+                  onClick={() =>
+                    mutate(async () => {
+                      await api(`/notes/${id}`, "DELETE");
+                      go("/library");
+                    })
+                  }
+                />
               </div>
             </fieldset>
           </form>
         </Panel>
         <div className="stack">
           <Panel>
-            <h2>{t("add_link")}</h2>
-            <Field label={t("pick_note")}>
+            <h2>{t("connect")}</h2>
+            <Field label={t("add_link")}>
               <Input
                 type="search"
                 value={search}
@@ -209,42 +254,68 @@ export function NotePage({ id }: { id: number }) {
                   });
                 }}
               >
-                <p>{selected.title}</p>
+                <p>
+                  <strong>{selected.title}</strong>
+                </p>
                 <Field label={t("link_reason")}>
-                  <Input name="reason" placeholder={t("link_reason_ph")} />
+                  <Input
+                    key={selected.id}
+                    name="reason"
+                    autoFocus
+                    defaultValue={reasons[selected.id] ?? ""}
+                    placeholder={t("link_reason_ph")}
+                  />
                 </Field>
-                <SaveButton disabled={busy}>{t("link")}</SaveButton>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setSelected(null)}
-                >
-                  ✕
-                </Button>
+                <div className="row">
+                  <SaveButton disabled={busy}>{t("link")}</SaveButton>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setSelected(null)}
+                  >
+                    {t("cancel")}
+                  </Button>
+                </div>
               </form>
             )}
-          </Panel>
-          <Panel>
-            <h2>
-              {t("links_out")}{" "}
-              <Badge variant="secondary">{data.links.length}</Badge>
-            </h2>
-            {linkRows(data.links)}
-            <h2>
-              {t("backlinks")}{" "}
-              <Badge variant="secondary">{data.backlinks.length}</Badge>
-            </h2>
-            {linkRows(data.backlinks)}
-          </Panel>
-          <Panel>
-            <h2>{t("suggestions")}</h2>
+            {!!data.links.length && (
+              <>
+                <h3>
+                  {t("links_out")}{" "}
+                  <Badge variant="secondary">{data.links.length}</Badge>
+                </h3>
+                {linkRows(data.links)}
+              </>
+            )}
+            {!!data.backlinks.length && (
+              <>
+                <h3>
+                  {t("backlinks")}{" "}
+                  <Badge variant="secondary">{data.backlinks.length}</Badge>
+                </h3>
+                {linkRows(data.backlinks)}
+              </>
+            )}
+            <div className="link-row">
+              <h3>{t("suggestions")}</h3>
+              {!!suggestions?.suggestions.length && (
+                <Button
+                  disabled={busy}
+                  size="sm"
+                  variant="outline"
+                  onClick={aiConnect}
+                >
+                  {t("ai_connect")}
+                </Button>
+              )}
+            </div>
             {suggestions?.suggestions.length ? (
               suggestions.suggestions.map((item) => (
                 <div className="link-row" key={item.id}>
                   <div>
                     <a href={`#/note/${item.id}`}>{item.title}</a>
                     <p className="small muted">
-                      {item.via} · {item.summary}
+                      {item.via} · {reasons[item.id] || item.summary}
                     </p>
                   </div>
                   <Button
@@ -252,8 +323,8 @@ export function NotePage({ id }: { id: number }) {
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      const reason = prompt(t("link_reason"), "");
-                      if (reason !== null) mutate(() => link(item.id, reason));
+                      setSelected(item);
+                      setSearch("");
                     }}
                   >
                     {t("link")}
@@ -264,60 +335,49 @@ export function NotePage({ id }: { id: number }) {
               <p className="muted small">{t("no_suggest")}</p>
             )}
           </Panel>
-          <Panel>
-            <h2>{t("in_outputs")}</h2>
-            {data.outputs.map((output) => (
-              <div className="link-row" key={output.id}>
-                <a href="#/ship">{output.title}</a>
-                <Badge variant="secondary">
-                  {t(
-                    output.status === "shipped" ? "out_shipped" : output.status,
-                  )}
-                </Badge>
-              </div>
-            ))}
-            {!!allOutputs?.outputs.filter(
-              (output) => !data.outputs.some((item) => item.id === output.id),
-            ).length && (
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const output = new FormData(event.currentTarget).get(
-                    "output",
-                  );
-                  mutate(() =>
-                    api(`/outputs/${output}/notes`, "POST", { note_id: id }),
-                  );
-                }}
-              >
-                <Field label={t("attach_note")}>
-                  <NativeSelect name="output">
-                    {allOutputs.outputs
-                      .filter(
-                        (output) =>
-                          !data.outputs.some((item) => item.id === output.id),
-                      )
-                      .map((output) => (
+          {(!!data.outputs.length || !!attachable.length) && (
+            <Panel>
+              <h2>{t("in_outputs")}</h2>
+              {data.outputs.map((output) => (
+                <div className="link-row" key={output.id}>
+                  <a href="#/ship">{output.title}</a>
+                  <Badge variant="secondary">
+                    {t(
+                      output.status === "shipped"
+                        ? "out_shipped"
+                        : output.status,
+                    )}
+                  </Badge>
+                </div>
+              ))}
+              {!!attachable.length && (
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const output = new FormData(event.currentTarget).get(
+                      "output",
+                    );
+                    mutate(() =>
+                      api(`/outputs/${output}/notes`, "POST", { note_id: id }),
+                    );
+                  }}
+                >
+                  <Field label={t("attach_note")}>
+                    <NativeSelect name="output">
+                      {attachable.map((output) => (
                         <option key={output.id} value={output.id}>
                           {output.title}
                         </option>
                       ))}
-                  </NativeSelect>
-                </Field>
-                <SaveButton disabled={busy} variant="outline">
-                  {t("attach_note")}
-                </SaveButton>
-              </form>
-            )}
-          </Panel>
-          <Panel>
-            <h2>{t("review_info")}</h2>
-            <p className="small muted">
-              {t("next_review")}:{" "}
-              {note.review_due ? fmtDate(note.review_due, lang) : t("never")} ·{" "}
-              {note.review_count} {t("times")}
-            </p>
-          </Panel>
+                    </NativeSelect>
+                  </Field>
+                  <SaveButton disabled={busy} variant="outline">
+                    {t("attach_note")}
+                  </SaveButton>
+                </form>
+              )}
+            </Panel>
+          )}
         </div>
       </div>
     </>

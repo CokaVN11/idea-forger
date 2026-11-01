@@ -1,17 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
-  BookOpen,
   CheckCheck,
   FlaskConical,
   Inbox as InboxIcon,
   LayoutDashboard,
   Library as LibraryIcon,
-  Network,
   Plus,
   LoaderCircle,
   Settings as SettingsIcon,
   Sprout,
-  History,
 } from "lucide-react";
 import { go, store } from "./lib/api";
 import { useApp, useResource, useTask } from "./lib/context";
@@ -139,6 +136,7 @@ function Shell() {
     const change = () => {
       setHash(location.hash || "#/");
       window.scrollTo(0, 0);
+      main.current?.focus({ preventScroll: true });
     };
     window.addEventListener("hashchange", change);
     return () => window.removeEventListener("hashchange", change);
@@ -176,56 +174,27 @@ function Shell() {
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
   }, []);
-  const navIcons: Record<string, typeof Sprout> = {
-    dashboard: LayoutDashboard,
-    capture: Plus,
-    inbox: InboxIcon,
-    review: BookOpen,
-    library: LibraryIcon,
-    timeline: History,
-    collider: FlaskConical,
-    outputs: CheckCheck,
-    settings: SettingsIcon,
-  };
-  const item = (href: string, key: string, badge?: number) => (
-    <a
-      key={href}
-      href={`#${href}`}
-      aria-current={
-        path === href || (page === "note" && href === "/library")
-          ? "page"
-          : undefined
-      }
-    >
-      <span className="nav-title">
-        {(() => {
-          const Icon = navIcons[key] || Network;
-          return <Icon aria-hidden="true" />;
-        })()}
-        {t(key)}
-      </span>
-      {badge !== undefined && <span className="nav-badge">{badge}</span>}
-    </a>
-  );
-  const groups = [
-    ["Capture", item("/capture", "capture")],
-    [
-      "Distill",
-      <>
-        {item("/inbox", "inbox", stats?.stages.inbox)}
-        {item("/review", "review", stats?.reviews_due)}
-      </>,
-    ],
-    [
-      "Connect",
-      <>
-        {item("/library", "library")}
-        {item("/timeline", "timeline")}
-      </>,
-    ],
-    ["Spark", item("/spark", "collider")],
-    ["Ship", item("/ship", "outputs")],
+  // Same five destinations on desktop and mobile; sub-views use SectionTabs.
+  const tabs = [
+    { href: "/", label: "dashboard", Icon: LayoutDashboard, also: [] },
+    {
+      href: "/inbox",
+      label: "distill",
+      Icon: InboxIcon,
+      also: ["review"],
+      badge: stats ? stats.stages.inbox + stats.reviews_due : 0,
+    },
+    {
+      href: "/library",
+      label: "library",
+      Icon: LibraryIcon,
+      also: ["note", "timeline"],
+    },
+    { href: "/spark", label: "spark", Icon: FlaskConical, also: [] },
+    { href: "/ship", label: "ship", Icon: CheckCheck, also: [] },
   ] as const;
+  const isActive = (tab: (typeof tabs)[number]) =>
+    path === tab.href || (tab.also as readonly string[]).includes(page);
   let content;
   switch (page) {
     case "capture":
@@ -244,7 +213,7 @@ function Shell() {
       content = <Timeline query={query} />;
       break;
     case "note":
-      content = <NotePage id={Number(parts[1])} />;
+      content = <NotePage key={parts[1]} id={Number(parts[1])} />;
       break;
     case "spark":
       content = <Spark />;
@@ -276,17 +245,31 @@ function Shell() {
           aria-label={lang === "vi" ? "Điều hướng" : "Navigation"}
         >
           <Brand />
-          <nav aria-label={lang === "vi" ? "Tất cả tính năng" : "All features"}>
-            {item("/", "dashboard")}
-            {groups.map(([label, items], index) => (
-              <div className="nav-group" key={label}>
-                <div className="nav-label">
-                  {index + 1} · {t(`step${index + 1}`)}
-                </div>
-                {items}
-              </div>
+          <Button className="side-capture" asChild>
+            <a
+              href="#/capture"
+              aria-current={page === "capture" ? "page" : undefined}
+            >
+              <Plus aria-hidden="true" />
+              {t("capture")}
+            </a>
+          </Button>
+          <nav aria-label={lang === "vi" ? "Điều hướng chính" : "Main navigation"}>
+            {tabs.map((tab) => (
+              <a
+                key={tab.href}
+                href={`#${tab.href}`}
+                aria-current={isActive(tab) ? "page" : undefined}
+              >
+                <span className="nav-title">
+                  <tab.Icon aria-hidden="true" />
+                  {t(tab.label)}
+                </span>
+                {"badge" in tab && tab.badge > 0 && (
+                  <span className="nav-badge">{tab.badge}</span>
+                )}
+              </a>
             ))}
-            <div className="nav-group">{item("/settings", "settings")}</div>
           </nav>
           <footer className="side-foot">
             <Button
@@ -296,10 +279,13 @@ function Shell() {
             >
               {lang === "vi" ? "EN" : "VI"}
             </Button>
-            <Button size="sm" asChild>
-              <a href="#/capture">
-                <Plus aria-hidden="true" />
-                {t("capture")}
+            <Button size="sm" variant="ghost" asChild>
+              <a
+                href="#/settings"
+                aria-current={page === "settings" ? "page" : undefined}
+              >
+                <SettingsIcon aria-hidden="true" />
+                {t("settings")}
               </a>
             </Button>
           </footer>
@@ -314,36 +300,18 @@ function Shell() {
         className="tab-bar"
         aria-label={lang === "vi" ? "Điều hướng chính" : "Main navigation"}
       >
-        {[
-          ["/", "dashboard"],
-          ["/inbox", "distill"],
-          ["/library", "library"],
-          ["/spark", "spark"],
-          ["/ship", "ship"],
-        ].map(([href, label]) => {
-          const target = String(href);
-          const active =
-            path === target ||
-            (target === "/inbox" && page === "review") ||
-            (target === "/library" && ["note", "timeline"].includes(page));
-          return (
-            <a
-              key={target}
-              href={`#${target}`}
-              aria-current={active ? "page" : undefined}
-            >
-              <span className={`tab-icon tab-${label}`}>
-                <NavigationIcon
-                  name={
-                    label as
-                      "dashboard" | "distill" | "library" | "spark" | "ship"
-                  }
-                />
-              </span>
-              <span>{t(String(label))}</span>
-            </a>
-          );
-        })}
+        {tabs.map((tab) => (
+          <a
+            key={tab.href}
+            href={`#${tab.href}`}
+            aria-current={isActive(tab) ? "page" : undefined}
+          >
+            <span className={`tab-icon tab-${tab.label}`}>
+              <NavigationIcon name={tab.label} />
+            </span>
+            <span>{t(tab.label)}</span>
+          </a>
+        ))}
       </nav>
     </>
   );

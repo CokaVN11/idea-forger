@@ -188,13 +188,12 @@
     color: var(--action-ink);
     font-weight: 700;
   }
-  .nav-label {
-    color: var(--muted-foreground);
-    text-transform: uppercase;
-    padding: 14px 10px 4px;
+  .side-capture {
+    margin: 4px 0 20px;
   }
-  .nav-group {
-    margin-top: 4px;
+  .sidebar nav {
+    display: grid;
+    gap: 4px;
   }
   .nav-badge {
     background: var(--secondary);
@@ -204,6 +203,7 @@
   }
   .side-foot {
     display: flex;
+    justify-content: space-between;
     gap: 8px;
     margin-top: auto;
     padding-top: 24px;
@@ -213,6 +213,9 @@
     padding: 32px clamp(16px, 4vw, 44px) 80px;
     width: 100%;
   }
+  .main:focus {
+    outline: none;
+  }
   .page > * + * {
     margin-top: 24px;
   }
@@ -221,8 +224,6 @@
     gap: 16px;
     flex-wrap: wrap;
     justify-content: space-between;
-  }
-  .page-head p {
   }
   .row {
     display: flex;
@@ -627,12 +628,6 @@
     width: 28px;
     height: 28px;
   }
-  .eyebrow {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--action-ink);
-    margin-bottom: 6px;
-  }
   .next-step h2 {
     margin-bottom: 8px;
   }
@@ -708,6 +703,10 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+  }
+  .heading-title h1 {
+    min-width: 0;
+    flex: 1;
   }
   .mobile-page-actions {
     display: none;
@@ -785,12 +784,6 @@
   .sidebar {
     border-right-width: 2px;
   }
-  .nav-label {
-    font-weight: 700;
-    font-size: 0.65rem;
-    letter-spacing: 0.1em;
-    padding-top: 18px;
-  }
   nav a {
     font-weight: 700;
   }
@@ -822,16 +815,8 @@
     padding: 24px;
     border-radius: 20px;
   }
-  .next-step .eyebrow,
   .next-step .muted {
     color: inherit;
-  }
-  .next-step .eyebrow {
-    opacity: 0.85;
-    color: var(--action-ink);
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
   }
   .next-step h2 {
     font-size: 1.4rem;
@@ -947,6 +932,7 @@
     gap: 24px;
     margin-bottom: 24px;
     border-bottom: 2px solid var(--border);
+    flex-wrap: wrap;
   }
   .section-tabs a {
     border: 0;
@@ -1050,9 +1036,8 @@
       font-size: 1.4rem;
     }
     .pipeline {
-      grid-template-columns: repeat(5, minmax(132px, 1fr)) !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 0;
-      overflow-x: auto;
       padding-block: 4px 20px;
     }
     .metric {
@@ -1073,12 +1058,40 @@
       font-size: 0.75rem;
     }
     .pipeline > :last-child {
-      grid-column: auto;
+      grid-column: 1 / -1;
+      border-bottom: 0;
+    }
+    .metric {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .metric:nth-child(even) {
+      border-right: 0;
+    }
+    .metric:last-child {
+      flex-direction: row;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+    }
+    .metric:last-child .metric-step {
+      flex: 1 1 100%;
     }
   }
   html {
     scroll-padding-top: 88px;
     scroll-padding-bottom: 104px;
+  }
+  ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  input,
+  textarea {
+    caret-color: var(--action-ink);
+  }
+  .body-text {
+    max-width: 75ch;
   }
   h1,
   h2,
@@ -1166,6 +1179,7 @@
     }
     .pipeline {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      overflow: visible;
     }
     .panel {
       padding: 16px;
@@ -1262,7 +1276,7 @@
     }
 
     .metric {
-      padding: 4px 16px;
+      padding: 16px;
     }
 
     .pipeline {

@@ -95,9 +95,9 @@ export function Capture({ query }: { query: URLSearchParams }) {
               </div>
             </details>
             <div className="row">
-              <SaveButton value="new">{t("save_new")}</SaveButton>
-              <SaveButton variant="outline" value="open">
-                {t("save")} →
+              <SaveButton value="new">{t("save")}</SaveButton>
+              <SaveButton variant="ghost" value="open">
+                {t("save_open")}
               </SaveButton>
             </div>
           </fieldset>

@@ -76,9 +76,6 @@ export function Review() {
       )}
       {note ? (
         <Panel className="form-width">
-          <p className="kind">
-            {notes.length} {t("left")}
-          </p>
           <h2>{note.title}</h2>
           <Textarea
             key={note.id}

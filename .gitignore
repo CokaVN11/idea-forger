@@ -13,3 +13,4 @@ wrangler.local.*
 wrangler.production.*
 *.pem
 *.key
+docs/superpowers/*

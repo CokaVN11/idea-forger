@@ -14,7 +14,6 @@ import { useApp, useResource } from "../lib/context";
 import type { Note, Stats } from "../lib/types";
 import {
   Heading,
-  InboxWarning,
   NoteItem,
   Panel,
   ResourceState,
@@ -71,14 +70,13 @@ export function Dashboard() {
   return (
     <>
       <Heading title={t("dashboard")} subtitle={t("tagline")} />
-      <InboxWarning stats={stats} />
       <section className="next-step" aria-labelledby="next-step-title">
         <div className="next-step-copy">
           <div className="step-emblem">
             <next.Icon aria-hidden="true" />
           </div>
           <div>
-            <p className="eyebrow">{t("next_step_label")}</p>
+            <p className="sr-only">{t("next_step_label")}</p>
             <h2 id="next-step-title">{t(`next_${next.kind}_title`)}</h2>
             <p className="muted">
               {t(`next_${next.kind}_hint`, { n: stats.reviews_due })}
@@ -114,17 +112,18 @@ export function Dashboard() {
       <div className="split">
         <div className="stack">
           <Panel>
-            <h2>{t("today_one")}</h2>
-            {stats.next_actions[0] ? (
-              <>
-                <h3>{stats.next_actions[0].next_action}</h3>
+            <h2>{t("next_actions")}</h2>
+            {stats.next_actions.length ? (
+              stats.next_actions.map((note) => (
                 <a
-                  className="small muted"
-                  href={`#/note/${stats.next_actions[0].id}`}
+                  key={note.id}
+                  className="note-item"
+                  href={`#/note/${note.id}`}
                 >
-                  {stats.next_actions[0].title}
+                  <strong>{note.next_action}</strong>
+                  <p className="small muted">{note.title}</p>
                 </a>
-              </>
+              ))
             ) : (
               <p className="muted">{t("no_actions")}</p>
             )}
@@ -165,21 +164,6 @@ export function Dashboard() {
               <p className="muted chart-empty">{t("weekly_empty")}</p>
             )}
           </Panel>
-          {stats.next_actions.length > 1 && (
-            <Panel>
-              <h2>{t("next_actions")}</h2>
-              {stats.next_actions.slice(1).map((note) => (
-                <a
-                  key={note.id}
-                  className="note-item"
-                  href={`#/note/${note.id}`}
-                >
-                  <strong>{note.next_action}</strong>
-                  <p className="small muted">{note.title}</p>
-                </a>
-              ))}
-            </Panel>
-          )}
         </div>
         <div className="stack">
           <Panel>
@@ -188,11 +172,6 @@ export function Dashboard() {
             </strong>
             <h2>{t("ship_ratio")}</h2>
             <p className="hint">{t("ship_ratio_hint")}</p>
-          </Panel>
-          <Panel>
-            <strong className="stat-number">{stats.reviews_due}</strong>
-            <h2>{t("reviews_due")}</h2>
-            <a href="#/review">{t("review")} →</a>
           </Panel>
           {old?.notes[0] && (
             <Panel>

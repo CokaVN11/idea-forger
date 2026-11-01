@@ -27,6 +27,19 @@ export function Settings() {
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
+  const indexNotes = () =>
+    void run(async () => {
+      let total = 0;
+      for (;;) {
+        const { done, remaining } = await api<{ done: number; remaining: number }>(
+          "/ai/backfill",
+          "POST",
+        );
+        total += done;
+        if (!done || !remaining) break;
+      }
+      notify(t("ai_index_done", { n: total }));
+    });
   const frameworks = [
     ["Capture", "Commonplace Book, Inbox", "Input"],
     [
@@ -40,7 +53,17 @@ export function Settings() {
   ];
   return (
     <>
-      <Heading title={t("settings")} />
+      <Heading title={t("settings")}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            store.del("if_token");
+            window.dispatchEvent(new Event("idea-forge:logout"));
+          }}
+        >
+          {t("logout")}
+        </Button>
+      </Heading>
       <div className="grid-2">
         <Panel>
           <h2>
@@ -118,25 +141,24 @@ export function Settings() {
           </div>
         </Panel>
         <Panel>
+          <h2>{t("ai_index")}</h2>
+          <p className="muted small">{t("ai_index_hint")}</p>
+          <Button variant="outline" disabled={busy} onClick={indexNotes}>
+            {t("ai_index")}
+          </Button>
+        </Panel>
+        <Panel>
           <h2>{t("shortcuts")}</h2>
           <p className="small">
             <kbd>c</kbd> {t("sc_capture")} · <kbd>/</kbd> {t("sc_search")} ·{" "}
             <kbd>Ctrl/⌘ ↵</kbd> {t("sc_save")}
           </p>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              store.del("if_token");
-              window.dispatchEvent(new Event("idea-forge:logout"));
-            }}
-          >
-            {t("logout")}
-          </Button>
         </Panel>
       </div>
       <Panel>
-        <h2>{t("framework")}</h2>
-        <div className="table-scroll">
+        <details className="capture-extras">
+          <summary>{t("framework")}</summary>
+          <div className="table-scroll">
           <table>
             <thead>
               <tr>
@@ -157,7 +179,8 @@ export function Settings() {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </details>
       </Panel>
     </>
   );

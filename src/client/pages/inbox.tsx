@@ -6,6 +6,7 @@ import {
   AreaField,
   BodyText,
   Button,
+  DeleteButton,
   Empty,
   ExternalLink,
   Heading,
@@ -67,47 +68,49 @@ export function Inbox() {
                 <TextField field="title" value={note.title} />
                 <AreaField field="summary" value={note.summary} required />
                 <AreaField field="why_matters" value={note.why_matters} />
-                <TagsField
-                  value={note.tags.join(", ")}
-                  tags={tags?.tags.map((tag) => tag.name)}
-                />
-                <div className="grid-2">
-                  <ParaField value={note.para} />
-                  <TextField field="para_ref" value={note.para_ref} />
-                </div>
                 <TextField field="next_action" value={note.next_action} />
-                <div className="row">
-                  <SaveButton>{t("do_distill")}</SaveButton>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIndex((i) => (i + 1) % notes.length)}
-                  >
-                    {t("skip")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() =>
-                      mutate(() =>
-                        api(`/notes/${note.id}`, "PATCH", {
-                          stage: "archived",
-                        }),
-                      )
-                    }
-                  >
-                    {t("archive")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={() => {
-                      if (confirm(t("confirm_del")))
-                        mutate(() => api(`/notes/${note.id}`, "DELETE"));
-                    }}
-                  >
-                    {t("del")}
-                  </Button>
+                <details className="capture-extras">
+                  <summary>{t("distill_extras")}</summary>
+                  <TagsField
+                    value={note.tags.join(", ")}
+                    tags={tags?.tags.map((tag) => tag.name)}
+                  />
+                  <div className="grid-2">
+                    <ParaField value={note.para} />
+                    <TextField field="para_ref" value={note.para_ref} />
+                  </div>
+                </details>
+                <div className="row between">
+                  <div className="row">
+                    <SaveButton>{t("do_distill")}</SaveButton>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIndex((i) => (i + 1) % notes.length)}
+                    >
+                      {t("skip")}
+                    </Button>
+                  </div>
+                  <div className="row">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() =>
+                        mutate(() =>
+                          api(`/notes/${note.id}`, "PATCH", {
+                            stage: "archived",
+                          }),
+                        )
+                      }
+                    >
+                      {t("archive")}
+                    </Button>
+                    <DeleteButton
+                      onClick={() =>
+                        mutate(() => api(`/notes/${note.id}`, "DELETE"))
+                      }
+                    />
+                  </div>
                 </div>
               </fieldset>
             </form>

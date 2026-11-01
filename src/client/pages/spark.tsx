@@ -78,7 +78,7 @@ export function Spark() {
       <Heading title={t("collider")} subtitle={t("spark_sub")} />
       <Panel>
         <div className="row">
-          <Field label={t("collide")}>
+          <Field label={t("spark_mode")}>
             <NativeSelect
               value={mode}
               onChange={(event) => {

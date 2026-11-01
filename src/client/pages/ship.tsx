@@ -5,6 +5,8 @@ import type { Output } from "../lib/types";
 import {
   Badge,
   Button,
+  DeleteButton,
+  Empty,
   ExternalLink,
   Heading,
   OutputKind,
@@ -53,6 +55,7 @@ export function Ship() {
           </fieldset>
         </form>
       </Panel>
+      {!data.outputs.length && <Empty>{t("no_outputs")}</Empty>}
       <div className="kanban">
         {statuses.map((status, index) => (
           <section key={status} className="kanban-column">
@@ -105,7 +108,6 @@ export function Ship() {
                           size="sm"
                           variant="outline"
                           disabled={busy}
-                          aria-label={t(statuses[index - 1])}
                           onClick={() =>
                             mutate(() =>
                               api(`/outputs/${output.id}`, "PATCH", {
@@ -114,27 +116,23 @@ export function Ship() {
                             )
                           }
                         >
-                          ←
+                          ← {t(statuses[index - 1])}
                         </Button>
                       )}
                       {index < 2 && (
                         <Button
                           size="sm"
                           disabled={busy}
-                          aria-label={t(
-                            statuses[index + 1] === "shipped"
-                              ? "out_shipped"
-                              : statuses[index + 1],
-                          )}
                           onClick={() =>
                             mutate(async () => {
                               await api(`/outputs/${output.id}`, "PATCH", {
                                 status: statuses[index + 1],
                               });
-                              if (index === 1) notify("Shipped!");
+                              if (index === 1) notify(t("out_shipped"));
                             })
                           }
                         >
+                          {t(index === 1 ? "out_shipped" : statuses[index + 1])}{" "}
                           →
                         </Button>
                       )}
@@ -145,29 +143,22 @@ export function Ship() {
                         variant="ghost"
                         disabled={busy}
                         onClick={() => {
-                          const url = prompt("URL", output.url || "");
+                          const url = prompt(t("out_url"), output.url || "");
                           if (url !== null)
                             mutate(() =>
                               api(`/outputs/${output.id}`, "PATCH", { url }),
                             );
                         }}
                       >
-                        URL
+                        {t("out_url")}
                       </Button>
-                      <Button
+                      <DeleteButton
                         size="sm"
-                        variant="ghost"
                         disabled={busy}
-                        aria-label={t("del")}
-                        onClick={() => {
-                          if (confirm(t("confirm_del")))
-                            mutate(() =>
-                              api(`/outputs/${output.id}`, "DELETE"),
-                            );
-                        }}
-                      >
-                        ✕
-                      </Button>
+                        onClick={() =>
+                          mutate(() => api(`/outputs/${output.id}`, "DELETE"))
+                        }
+                      />
                     </div>
                   </div>
                 </Panel>

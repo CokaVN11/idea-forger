@@ -1,5 +1,12 @@
 import { Plus, Settings, Sprout } from "lucide-react";
-import { useId, type ComponentProps, type ReactNode } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useId,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
@@ -124,11 +131,24 @@ export function Field({
   children: ReactNode;
   hint?: string;
 }) {
+  const hintId = useId();
   return (
     <label className="field">
       <span className="field-label">{label}</span>
-      {children}
-      {hint && <span className="hint">{hint}</span>}
+      {hint
+        ? Children.map(children, (child) =>
+            isValidElement<{ "aria-describedby"?: string }>(child)
+              ? cloneElement(child, {
+                  "aria-describedby": [child.props["aria-describedby"], hintId]
+                    .filter(Boolean)
+                    .join(" "),
+                })
+              : child,
+          )
+        : children}
+      {hint && (
+        <span id={hintId} className="hint">{hint}</span>
+      )}
     </label>
   );
 }
@@ -264,6 +284,26 @@ export function SaveButton(props: ComponentProps<typeof Button>) {
   return (
     <Button type="submit" {...props}>
       {props.children ?? t("save")}
+    </Button>
+  );
+}
+export function DeleteButton({
+  onClick,
+  children,
+  ...props
+}: ComponentProps<typeof Button>) {
+  const { t } = useApp();
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      className="danger"
+      {...props}
+      onClick={(event) => {
+        if (confirm(t("confirm_del"))) onClick?.(event);
+      }}
+    >
+      {children ?? t("del")}
     </Button>
   );
 }
