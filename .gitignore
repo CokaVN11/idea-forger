@@ -1,0 +1,7 @@
+.wrangler/
+node_modules/
+.dev.vars
+dist/
+.dev.vars.*
+.cocoindex_code/
+!.dev.vars.example

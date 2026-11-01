@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "idea-forge",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "idea-forge-db",
+      // Thay bằng ID thật sau khi chạy: npx wrangler d1 create idea-forge-db
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "vars": {
+    "INBOX_LIMIT": "20",
+    "TZ_OFFSET_HOURS": "7",
+  },
+  // V2: thêm "ai": { "binding": "AI" } và "vectorize": [...] khi cần
+}
