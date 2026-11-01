@@ -20,6 +20,7 @@ import {
   TextField,
   fmtDate,
 } from "../components/shared";
+import { MarkdownField } from "../components/markdown-view";
 export function NotePage({ id }: { id: number }) {
   const { t, lang, refresh, notify } = useApp();
   const { busy, run } = useTask();
@@ -163,7 +164,7 @@ export function NotePage({ id }: { id: number }) {
               <TextField field="title" value={v("title")} />
               <AreaField field="summary" value={v("summary")} />
               <AreaField field="why_matters" value={v("why_matters")} />
-              <AreaField field="body" rows={6} value={v("body")} />
+              <MarkdownField value={v("body")} />
               <TextField field="next_action" value={v("next_action")} />
               {/* Opened after an AI draft so filled-in tags/PARA stay visible. */}
               <details className="capture-extras" open={rev > 0}>
