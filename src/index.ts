@@ -2,7 +2,7 @@
  * Idea Forge — Cloudflare Worker API
  * Pipeline: Capture → Distill → Connect → Spark → Ship
  */
-import { decode, normalize, topK } from "./vector";
+import { decode, dot, normalize, topK } from "./vector";
 
 export interface Env {
   DB: D1Database;
@@ -552,6 +552,33 @@ async function api(req: Request, env: Env, ctx: ExecutionContext, url: URL): Pro
       "SELECT t.name, COUNT(nt.note_id) c FROM tags t LEFT JOIN note_tags nt ON nt.tag_id = t.id GROUP BY t.id HAVING c > 0 ORDER BY c DESC, t.name",
     ).all();
     return json({ tags: results });
+  }
+  if (path === "/graph" && m === "GET") {
+    const [nodes, edges] = await env.DB.batch([
+      env.DB.prepare("SELECT id, title, kind FROM notes WHERE stage != 'archived' ORDER BY updated_at DESC LIMIT 300"),
+      env.DB.prepare("SELECT from_id, to_id, reason FROM links"),
+    ]);
+    // Unlinked pairs the embeddings find similar (same 0.5 cutoff as suggestions), top 2 per note. shortcut: O(n²) dot products over <=300 notes, move to Vectorize if the cap grows.
+    const ids = (nodes.results as Json[]).map((n) => n.id as number);
+    const { results: vecs } = ids.length
+      ? await env.DB.prepare(`SELECT note_id id, vec FROM note_embeddings WHERE note_id IN (${ids.map(() => "?").join(",")})`).bind(...ids).all<{ id: number; vec: number[] }>()
+      : { results: [] };
+    const linked = new Set((edges.results as Json[]).flatMap((l) => [`${l.from_id}-${l.to_id}`, `${l.to_id}-${l.from_id}`]));
+    const dec = vecs.map((v) => ({ id: v.id, vec: decode(v.vec) }));
+    const picked = new Map<string, { from_id: number; to_id: number; score: number }>();
+    for (const a of dec) {
+      const best = dec
+        .filter((b) => b.id !== a.id && !linked.has(`${a.id}-${b.id}`))
+        .map((b) => ({ id: b.id, score: dot(a.vec, b.vec) }))
+        .filter((b) => b.score >= 0.5)
+        .sort((x, y) => y.score - x.score)
+        .slice(0, 2);
+      for (const b of best) {
+        const [from_id, to_id] = a.id < b.id ? [a.id, b.id] : [b.id, a.id];
+        picked.set(`${from_id}-${to_id}`, { from_id, to_id, score: b.score });
+      }
+    }
+    return json({ nodes: nodes.results, links: edges.results, suggested: [...picked.values()] });
   }
   if (path === "/export" && m === "GET") return exportAll(env);
   if (path === "/import" && m === "POST") return importAll(env, await body(req));

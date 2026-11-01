@@ -20,6 +20,7 @@ import { Capture } from "./pages/capture";
 import { Inbox } from "./pages/inbox";
 import { Review } from "./pages/review";
 import { Library, Timeline } from "./pages/library";
+import { Graph } from "./pages/graph";
 import { NotePage } from "./pages/note";
 import { Spark } from "./pages/spark";
 import { Ship } from "./pages/ship";
@@ -188,7 +189,7 @@ function Shell() {
       href: "/library",
       label: "library",
       Icon: LibraryIcon,
-      also: ["note", "timeline"],
+      also: ["note", "timeline", "graph"],
     },
     { href: "/spark", label: "spark", Icon: FlaskConical, also: [] },
     { href: "/ship", label: "ship", Icon: CheckCheck, also: [] },
@@ -211,6 +212,9 @@ function Shell() {
       break;
     case "timeline":
       content = <Timeline query={query} />;
+      break;
+    case "graph":
+      content = <Graph />;
       break;
     case "note":
       content = <NotePage key={parts[1]} id={Number(parts[1])} />;

@@ -78,7 +78,7 @@ export function SectionTabs({
 }) {
   const { t, lang } = useApp();
   const routes =
-    group === "distill" ? ["inbox", "review"] : ["library", "timeline"];
+    group === "distill" ? ["inbox", "review"] : ["library", "timeline", "graph"];
   return (
     <nav
       className="section-tabs"
