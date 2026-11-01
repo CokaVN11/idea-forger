@@ -5,3 +5,11 @@ dist/
 .dev.vars.*
 .cocoindex_code/
 !.dev.vars.example
+
+.env
+.env.*
+!.env.example
+wrangler.local.*
+wrangler.production.*
+*.pem
+*.key

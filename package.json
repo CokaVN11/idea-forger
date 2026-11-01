@@ -4,12 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "db:migrate:local": "wrangler d1 migrations apply idea-forge-db --local",
-    "db:migrate:remote": "wrangler d1 migrations apply idea-forge-db --remote",
-    "deploy": "npm run build && wrangler deploy",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local --config wrangler.jsonc",
+    "db:migrate:remote": "npm run deploy:check && wrangler d1 migrations apply DB --remote",
+    "deploy": "npm run build:production && npm run deploy:ci",
     "build": "npm run typecheck && vite build",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy:ci": "npm run db:migrate:remote && wrangler deploy",
+    "build:production": "npm run typecheck && vite build --mode deploy",
+    "deploy:check": "node scripts/check-deploy-config.mjs",
+    "test": "node --test test/*.test.mjs"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.66.0",

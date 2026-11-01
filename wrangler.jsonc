@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "idea-forge",
+  "name": "idea-forger",
   "main": "src/index.ts",
   "compatibility_date": "2025-09-01",
   "assets": {
@@ -12,7 +12,6 @@
     {
       "binding": "DB",
       "database_name": "idea-forge-db",
-      // Thay bằng ID thật sau khi chạy: npx wrangler d1 create idea-forge-db
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "migrations",
     },
