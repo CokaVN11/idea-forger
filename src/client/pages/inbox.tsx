@@ -12,6 +12,7 @@ import {
   Panel,
   ParaField,
   ResourceState,
+  SectionTabs,
   SaveButton,
   TagsField,
   TextField,
@@ -43,6 +44,7 @@ export function Inbox() {
   return (
     <>
       <Heading title={t("distill_title")} subtitle={t("distill_sub")} />
+      <SectionTabs active="inbox" group="distill" />
       {note ? (
         <div className="split">
           <Panel>

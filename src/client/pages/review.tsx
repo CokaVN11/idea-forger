@@ -1,3 +1,4 @@
+import { CheckCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useApp, useResource, useTask } from "../lib/context";
@@ -5,10 +6,10 @@ import type { Note } from "../lib/types";
 import {
   BodyText,
   Button,
-  Empty,
   Heading,
   Panel,
   ResourceState,
+  SectionTabs,
   Textarea,
 } from "../components/shared";
 export function Review() {
@@ -54,6 +55,25 @@ export function Review() {
   return (
     <>
       <Heading title={t("review")} subtitle={t("review_sub")} />
+      <SectionTabs active="review" group="distill" />
+      {(notes.length > 0 || completed.length > 0) && (
+        <div className="review-progress">
+          <div className="row between">
+            <strong>{t("review_session")}</strong>
+            <span className="small muted" role="status">
+              {t("review_progress", {
+                done: completed.length,
+                total: completed.length + notes.length,
+              })}
+            </span>
+          </div>
+          <progress
+            aria-label={t("review_session")}
+            value={completed.length}
+            max={completed.length + notes.length}
+          />
+        </div>
+      )}
       {note ? (
         <Panel className="form-width">
           <p className="kind">
@@ -92,7 +112,30 @@ export function Review() {
           )}
         </Panel>
       ) : (
-        <Empty>{t("review_done")}</Empty>
+        <Panel className="review-celebration form-width">
+          <div className="step-emblem">
+            <CheckCheck aria-hidden="true" />
+          </div>
+          <h2>
+            {t(
+              completed.length ? "review_complete_title" : "review_clear_title",
+            )}
+          </h2>
+          <p className="muted">
+            {t(
+              completed.length ? "review_complete_hint" : "review_clear_hint",
+              { n: completed.length },
+            )}
+          </p>
+          <div className="row">
+            <Button asChild>
+              <a href="#/capture">{t("capture")}</a>
+            </Button>
+            <Button variant="outline" asChild>
+              <a href="#/">{t("back_dashboard")}</a>
+            </Button>
+          </div>
+        </Panel>
       )}
     </>
   );

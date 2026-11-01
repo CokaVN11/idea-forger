@@ -1,9 +1,23 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Menu, Plus, X } from "lucide-react";
+import {
+  BookOpen,
+  CheckCheck,
+  FlaskConical,
+  Inbox as InboxIcon,
+  LayoutDashboard,
+  Library as LibraryIcon,
+  Network,
+  Plus,
+  LoaderCircle,
+  Settings as SettingsIcon,
+  Sprout,
+  History,
+} from "lucide-react";
 import { go, store } from "./lib/api";
 import { useApp, useResource, useTask } from "./lib/context";
 import type { Stats } from "./lib/types";
 import { Button, Field, Input, Panel } from "./components/shared";
+import { NavigationIcon } from "./components/navigation-icon";
 import { Dashboard } from "./pages/dashboard";
 import { Capture } from "./pages/capture";
 import { Inbox } from "./pages/inbox";
@@ -26,7 +40,7 @@ function Brand() {
   return (
     <div className="brand">
       <span className="brand-mark" aria-hidden="true">
-        △
+        <Sprout />
       </span>
       Idea Forge
     </div>
@@ -73,12 +87,22 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
                 name="token"
                 type="password"
                 autoComplete="current-password"
-                autoFocus
+                spellCheck={false}
+                aria-invalid={!!error}
+                aria-describedby={error ? "login-error" : undefined}
                 required
               />
             </Field>
             <div className="row between">
-              <Button type="submit">{t("unlock")}</Button>
+              <Button type="submit" aria-busy={busy}>
+                {busy && (
+                  <LoaderCircle
+                    className="loading-spinner"
+                    aria-hidden="true"
+                  />
+                )}
+                {t("unlock")}
+              </Button>
               <Button
                 type="button"
                 variant="ghost"
@@ -88,7 +112,7 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
               </Button>
             </div>
             {error && (
-              <p role="alert" className="danger">
+              <p id="login-error" role="alert" className="danger">
                 {error}
               </p>
             )}
@@ -101,9 +125,6 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
 function Shell() {
   const { t, lang, setLang } = useApp();
   const [hash, setHash] = useState(location.hash || "#/");
-  const [menu, setMenu] = useState(false);
-  const menuButton = useRef<HTMLButtonElement>(null);
-  const sidebar = useRef<HTMLElement>(null);
   const main = useRef<HTMLElement>(null);
   const { data: stats } = useResource<Stats>("/stats");
   const raw = hash.slice(1);
@@ -117,7 +138,6 @@ function Shell() {
   useEffect(() => {
     const change = () => {
       setHash(location.hash || "#/");
-      setMenu(false);
       window.scrollTo(0, 0);
     };
     window.addEventListener("hashchange", change);
@@ -156,40 +176,17 @@ function Shell() {
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
   }, []);
-  useEffect(() => {
-    if (!menu) return;
-    const oldOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    main.current?.setAttribute("inert", "");
-    sidebar.current?.querySelector<HTMLElement>("a,button")?.focus();
-    const trap = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setMenu(false);
-      }
-      if (event.key !== "Tab") return;
-      const items = sidebar.current?.querySelectorAll<HTMLElement>(
-        "a[href],button:not(:disabled)",
-      );
-      if (!items?.length) return;
-      const first = items[0],
-        last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", trap);
-    return () => {
-      document.body.style.overflow = oldOverflow;
-      main.current?.removeAttribute("inert");
-      document.removeEventListener("keydown", trap);
-      menuButton.current?.focus();
-    };
-  }, [menu]);
+  const navIcons: Record<string, typeof Sprout> = {
+    dashboard: LayoutDashboard,
+    capture: Plus,
+    inbox: InboxIcon,
+    review: BookOpen,
+    library: LibraryIcon,
+    timeline: History,
+    collider: FlaskConical,
+    outputs: CheckCheck,
+    settings: SettingsIcon,
+  };
   const item = (href: string, key: string, badge?: number) => (
     <a
       key={href}
@@ -200,7 +197,13 @@ function Shell() {
           : undefined
       }
     >
-      <span>{t(key)}</span>
+      <span className="nav-title">
+        {(() => {
+          const Icon = navIcons[key] || Network;
+          return <Icon aria-hidden="true" />;
+        })()}
+        {t(key)}
+      </span>
       {badge !== undefined && <span className="nav-badge">{badge}</span>}
     </a>
   );
@@ -267,52 +270,18 @@ function Shell() {
       >
         {lang === "vi" ? "Đến nội dung" : "Skip to content"}
       </a>
-      <header className="topbar">
-        <Button
-          ref={menuButton}
-          variant="ghost"
-          size="icon"
-          aria-label={lang === "vi" ? "Mở menu" : "Open menu"}
-          aria-expanded={menu}
-          onClick={() => setMenu(!menu)}
-        >
-          <Menu />
-        </Button>
-        <strong>Idea Forge</strong>
-        <Button size="sm" onClick={() => go("/capture")}>
-          <Plus />
-          {t("capture")}
-        </Button>
-      </header>
-      {menu && (
-        <div className="sidebar-backdrop" onClick={() => setMenu(false)} />
-      )}
       <div className="shell">
         <aside
-          ref={sidebar}
-          className={`sidebar ${menu ? "open" : ""}`}
+          className="sidebar"
           aria-label={lang === "vi" ? "Điều hướng" : "Navigation"}
         >
-          <div className="row between">
-            <Brand />
-            {menu && (
-              <Button
-                className="close-menu"
-                variant="ghost"
-                size="icon"
-                aria-label={lang === "vi" ? "Đóng menu" : "Close menu"}
-                onClick={() => setMenu(false)}
-              >
-                <X />
-              </Button>
-            )}
-          </div>
-          <nav>
+          <Brand />
+          <nav aria-label={lang === "vi" ? "Tất cả tính năng" : "All features"}>
             {item("/", "dashboard")}
             {groups.map(([label, items], index) => (
               <div className="nav-group" key={label}>
                 <div className="nav-label">
-                  {index + 1} · {label}
+                  {index + 1} · {t(`step${index + 1}`)}
                 </div>
                 {items}
               </div>
@@ -327,9 +296,11 @@ function Shell() {
             >
               {lang === "vi" ? "EN" : "VI"}
             </Button>
-            <Button size="sm" onClick={() => go("/capture")}>
-              <Plus />
-              {t("capture")}
+            <Button size="sm" asChild>
+              <a href="#/capture">
+                <Plus aria-hidden="true" />
+                {t("capture")}
+              </a>
             </Button>
           </footer>
         </aside>
@@ -339,6 +310,41 @@ function Shell() {
           </div>
         </main>
       </div>
+      <nav
+        className="tab-bar"
+        aria-label={lang === "vi" ? "Điều hướng chính" : "Main navigation"}
+      >
+        {[
+          ["/", "dashboard"],
+          ["/inbox", "distill"],
+          ["/library", "library"],
+          ["/spark", "spark"],
+          ["/ship", "ship"],
+        ].map(([href, label]) => {
+          const target = String(href);
+          const active =
+            path === target ||
+            (target === "/inbox" && page === "review") ||
+            (target === "/library" && ["note", "timeline"].includes(page));
+          return (
+            <a
+              key={target}
+              href={`#${target}`}
+              aria-current={active ? "page" : undefined}
+            >
+              <span className={`tab-icon tab-${label}`}>
+                <NavigationIcon
+                  name={
+                    label as
+                      "dashboard" | "distill" | "library" | "spark" | "ship"
+                  }
+                />
+              </span>
+              <span>{t(String(label))}</span>
+            </a>
+          );
+        })}
+      </nav>
     </>
   );
 }

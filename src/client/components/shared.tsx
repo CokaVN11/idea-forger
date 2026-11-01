@@ -1,3 +1,4 @@
+import { Plus, Settings, Sprout } from "lucide-react";
 import { useId, type ComponentProps, type ReactNode } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -17,7 +18,7 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <Card className={`panel gap-3 rounded-lg p-5 shadow-none ${className}`}>
+    <Card className={`panel gap-3 rounded-lg shadow-none ${className}`}>
       {children}
     </Card>
   );
@@ -26,19 +27,65 @@ export function Heading({
   title,
   subtitle,
   children,
+  captureAction = true,
 }: {
+  captureAction?: boolean;
   title: string;
   subtitle?: string;
   children?: ReactNode;
 }) {
+  const { t } = useApp();
   return (
     <header className="page-head">
-      <div>
-        <h1>{title}</h1>
+      <div className="heading-content">
+        <div className="heading-title">
+          <h1>{title}</h1>
+          <div className="mobile-page-actions">
+            {captureAction && (
+              <Button variant="outline" size="icon" asChild>
+                <a href="#/capture" aria-label={t("capture")}>
+                  <Plus aria-hidden="true" />
+                </a>
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" asChild>
+              <a href="#/settings" aria-label={t("settings")}>
+                <Settings aria-hidden="true" />
+              </a>
+            </Button>
+          </div>
+        </div>
         {subtitle && <p className="muted">{subtitle}</p>}
       </div>
       {children}
     </header>
+  );
+}
+export function SectionTabs({
+  active,
+  group,
+}: {
+  active: string;
+  group: "distill" | "connect";
+}) {
+  const { t, lang } = useApp();
+  const routes =
+    group === "distill" ? ["inbox", "review"] : ["library", "timeline"];
+  return (
+    <nav
+      className="section-tabs"
+      aria-label={lang === "vi" ? "Chế độ xem" : "View"}
+    >
+      {routes.map((route) => (
+        <a
+          key={route}
+          href={`#/${route}`}
+          aria-current={active === route ? "page" : undefined}
+        >
+          {t(route)}
+        </a>
+      ))}
+    </nav>
   );
 }
 export function ResourceState({ error }: { error?: string }) {
@@ -57,7 +104,16 @@ export function ResourceState({ error }: { error?: string }) {
   );
 }
 export function Empty({ children }: { children: ReactNode }) {
-  return <Panel className="empty">{children}</Panel>;
+  return (
+    <div className="empty">
+      <div className="empty-art" aria-hidden="true">
+        <Sprout />
+        <span />
+        <span />
+      </div>
+      <div className="empty-copy">{children}</div>
+    </div>
+  );
 }
 export function Field({
   label,

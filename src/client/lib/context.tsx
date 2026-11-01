@@ -25,7 +25,7 @@ export function Provider({ children }: { children: ReactNode }) {
   const [lang, changeLang] = useState<Language>(
     store.get("if_lang") === "en" ? "en" : "vi",
   );
-  const [theme, changeTheme] = useState(store.get("if_theme", "auto"));
+  const [theme, changeTheme] = useState(store.get("if_theme", "light"));
   const [revision, setRevision] = useState(0);
   const [message, setMessage] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -37,6 +37,14 @@ export function Provider({ children }: { children: ReactNode }) {
         theme === "dark" || (theme === "auto" && media.matches),
       );
       document.documentElement.lang = lang;
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute(
+          "content",
+          document.documentElement.classList.contains("dark")
+            ? "#131f24"
+            : "#ffffff",
+        );
     };
     apply();
     media.addEventListener("change", apply);

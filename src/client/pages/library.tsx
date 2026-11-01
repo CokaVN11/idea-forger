@@ -12,6 +12,7 @@ import {
   NoteItem,
   Panel,
   ResourceState,
+  SectionTabs,
 } from "../components/shared";
 export function Library({ query }: { query: URLSearchParams }) {
   const { t, kindLabel } = useApp();
@@ -39,6 +40,7 @@ export function Library({ query }: { query: URLSearchParams }) {
   return (
     <>
       <Heading title={t("library")} subtitle={t("library_sub")} />
+      <SectionTabs active="library" group="connect" />
       <Panel>
         <div className="grid-3">
           <Field label={t("search_ph")}>
@@ -144,6 +146,7 @@ export function Timeline({ query }: { query: URLSearchParams }) {
           </NativeSelect>
         </Field>
       </Heading>
+      <SectionTabs active="timeline" group="connect" />
       {!data ? (
         <ResourceState error={error} />
       ) : !data.notes.length ? (

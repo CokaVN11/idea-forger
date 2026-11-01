@@ -27,6 +27,10 @@ Các chức năng hỗ trợ:
 
 Đây là ứng dụng dùng cho cá nhân với một API token chung cho mỗi bản deploy. Project chưa có tài khoản người dùng hay phân quyền cho nhiều người.
 
+## Thiết kế giao diện
+
+[DESIGN.md](DESIGN.md) lưu nguyên tắc UI/UX và gamification nhẹ. Tham khảo chính là [Duolingo core tabs redesign](docs/design/duolingo-core-tabs.md); [bản phân tích landing gốc](docs/design/duolingo-reference.md) được giữ riêng cùng các giới hạn đo lường.
+
 ## Stack
 
 - **UI:** React, TypeScript, Vite, Tailwind CSS v4 và shadcn/ui.

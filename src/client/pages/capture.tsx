@@ -46,44 +46,54 @@ export function Capture({ query }: { query: URLSearchParams }) {
   }
   return (
     <>
-      <Heading title={t("capture_title")} subtitle={t("capture_sub")} />
+      <Heading
+        title={t("capture_title")}
+        subtitle={t("capture_sub")}
+        captureAction={false}
+      />
       {stats && <InboxWarning stats={stats} />}
       <Panel className="form-width">
         <form onSubmit={submit}>
           <fieldset disabled={busy}>
             <AreaField field="body" value={query.get("text") ?? ""} rows={6} />
-            <div className="grid-2">
-              <TextField
-                field="title"
-                value={!query.get("text") ? (query.get("title") ?? "") : ""}
-              />
-              <KindField
-                value={
-                  query.get("url")
-                    ? query.get("text")
-                      ? "quote"
-                      : "link"
-                    : "idea"
-                }
-              />
-              <TextField
-                field="source_url"
-                type="url"
-                value={query.get("url") ?? ""}
-              />
-              <TextField
-                field="source_title"
-                value={query.get("title") ?? ""}
-              />
-              <TagsField tags={data?.tags.map((tag) => tag.name)} />
-              <Field label={t("learned_at")} hint={t("learned_hint")}>
-                <Input
-                  type="date"
-                  name="learned_at"
-                  defaultValue={todayStr()}
+            <details
+              className="capture-extras"
+              open={query.has("url") || query.has("title")}
+            >
+              <summary>{t("capture_extras")}</summary>
+              <div className="grid-2">
+                <TextField
+                  field="title"
+                  value={!query.get("text") ? (query.get("title") ?? "") : ""}
                 />
-              </Field>
-            </div>
+                <KindField
+                  value={
+                    query.get("url")
+                      ? query.get("text")
+                        ? "quote"
+                        : "link"
+                      : "idea"
+                  }
+                />
+                <TextField
+                  field="source_url"
+                  type="url"
+                  value={query.get("url") ?? ""}
+                />
+                <TextField
+                  field="source_title"
+                  value={query.get("title") ?? ""}
+                />
+                <TagsField tags={data?.tags.map((tag) => tag.name)} />
+                <Field label={t("learned_at")} hint={t("learned_hint")}>
+                  <Input
+                    type="date"
+                    name="learned_at"
+                    defaultValue={todayStr()}
+                  />
+                </Field>
+              </div>
+            </details>
             <div className="row">
               <SaveButton value="new">{t("save_new")}</SaveButton>
               <SaveButton variant="outline" value="open">
