@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { api, formBody, go } from "../lib/api";
 import { useApp, useDebounced, useResource, useTask } from "../lib/context";
 import type { Note, NoteDetail, NoteLink, Output, Tag } from "../lib/types";
@@ -36,8 +36,45 @@ export function NotePage({ id }: { id: number }) {
   const [selected, setSelected] = useState<Pick<Note, "id" | "title"> | null>(
     null,
   );
+  // AI draft merged over the form's current values; `rev` remounts the uncontrolled form to apply it.
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [rev, setRev] = useState(0);
+  const formEl = useRef<HTMLFormElement>(null);
+  const [reasons, setReasons] = useState<Record<number, string>>({});
   if (!data) return <ResourceState error={error} />;
   const note = data.note;
+  const v = (field: keyof Note) =>
+    draft[field] ??
+    (field === "tags" ? note.tags.join(", ") : String(note[field] ?? ""));
+  const aiDistill = () => {
+    // Read the form before run() disables the fieldset: disabled fields drop out of FormData.
+    const current = formBody(formEl.current!);
+    void run(async () => {
+      const { draft: ai } = await api<{ draft: Record<string, string | string[]> }>(
+        `/notes/${id}/distill`,
+        "POST",
+      );
+      const merged: Record<string, string> = {};
+      for (const [key, value] of Object.entries(current))
+        merged[key] = Array.isArray(value) ? value.join(", ") : String(value);
+      for (const [key, value] of Object.entries(ai))
+        if (key !== "tags" && key !== "kind" && value) merged[key] = String(value);
+      merged.tags = [
+        ...new Set([...(current.tags as string[]), ...(ai.tags as string[])]),
+      ].join(", ");
+      setDraft(merged);
+      setRev((n) => n + 1);
+      notify(t("ai_distill_done"));
+    });
+  };
+  const aiConnect = () =>
+    void run(async () => {
+      const { suggestions: out } = await api<{
+        suggestions: { id: number; reason: string }[];
+      }>(`/notes/${id}/connect`, "POST");
+      setReasons(Object.fromEntries(out.map((item) => [item.id, item.reason])));
+      notify(t("ai_connect_done"));
+    });
   const mutate = (task: () => Promise<unknown>) =>
     void run(async () => {
       await task();
@@ -53,6 +90,7 @@ export function NotePage({ id }: { id: number }) {
       body.stage = "distilled";
     mutate(async () => {
       await api(`/notes/${id}`, "PATCH", body);
+      setDraft({});
       notify(t("saved"));
     });
   }
@@ -113,35 +151,35 @@ export function NotePage({ id }: { id: number }) {
       </Heading>
       <div className="split">
         <Panel>
-          <form onSubmit={submit}>
+          <form key={rev} ref={formEl} onSubmit={submit}>
             <fieldset disabled={busy}>
               <div className="grid-2">
-                <TextField field="title" value={note.title} />
-                <KindField value={note.kind} />
+                <TextField field="title" value={v("title")} />
+                <KindField value={v("kind")} />
               </div>
-              <AreaField field="summary" value={note.summary} />
-              <AreaField field="why_matters" value={note.why_matters} />
-              <AreaField field="body" rows={6} value={note.body} />
+              <AreaField field="summary" value={v("summary")} />
+              <AreaField field="why_matters" value={v("why_matters")} />
+              <AreaField field="body" rows={6} value={v("body")} />
               <div className="grid-2">
                 <TextField
                   field="source_url"
                   type="url"
-                  value={note.source_url}
+                  value={v("source_url")}
                 />
-                <TextField field="source_title" value={note.source_title} />
+                <TextField field="source_title" value={v("source_title")} />
                 <TagsField
-                  value={note.tags.join(", ")}
+                  value={v("tags")}
                   tags={tags?.tags.map((tag) => tag.name)}
                 />
                 <TextField
                   field="learned_at"
                   type="date"
-                  value={note.learned_at}
+                  value={v("learned_at")}
                 />
-                <ParaField value={note.para} />
-                <TextField field="para_ref" value={note.para_ref} />
+                <ParaField value={v("para")} />
+                <TextField field="para_ref" value={v("para_ref")} />
               </div>
-              <TextField field="next_action" value={note.next_action} />
+              <TextField field="next_action" value={v("next_action")} />
               <div className="row">
                 <SaveButton />
                 <>
@@ -151,6 +189,9 @@ export function NotePage({ id }: { id: number }) {
                     </SaveButton>
                   )}
                 </>
+                <Button type="button" variant="outline" onClick={aiDistill}>
+                  {t("ai_distill")}
+                </Button>
                 <Button
                   type="button"
                   variant="destructive"
@@ -237,14 +278,26 @@ export function NotePage({ id }: { id: number }) {
             {linkRows(data.backlinks)}
           </Panel>
           <Panel>
-            <h2>{t("suggestions")}</h2>
+            <div className="link-row">
+              <h2>{t("suggestions")}</h2>
+              {!!suggestions?.suggestions.length && (
+                <Button
+                  disabled={busy}
+                  size="sm"
+                  variant="outline"
+                  onClick={aiConnect}
+                >
+                  {t("ai_connect")}
+                </Button>
+              )}
+            </div>
             {suggestions?.suggestions.length ? (
               suggestions.suggestions.map((item) => (
                 <div className="link-row" key={item.id}>
                   <div>
                     <a href={`#/note/${item.id}`}>{item.title}</a>
                     <p className="small muted">
-                      {item.via} · {item.summary}
+                      {item.via} · {reasons[item.id] || item.summary}
                     </p>
                   </div>
                   <Button
@@ -252,7 +305,10 @@ export function NotePage({ id }: { id: number }) {
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      const reason = prompt(t("link_reason"), "");
+                      const reason = prompt(
+                        t("link_reason"),
+                        reasons[item.id] ?? "",
+                      );
                       if (reason !== null) mutate(() => link(item.id, reason));
                     }}
                   >

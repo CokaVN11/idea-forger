@@ -27,6 +27,19 @@ export function Settings() {
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
+  const indexNotes = () =>
+    void run(async () => {
+      let total = 0;
+      for (;;) {
+        const { done, remaining } = await api<{ done: number; remaining: number }>(
+          "/ai/backfill",
+          "POST",
+        );
+        total += done;
+        if (!done || !remaining) break;
+      }
+      notify(t("ai_index_done", { n: total }));
+    });
   const frameworks = [
     ["Capture", "Commonplace Book, Inbox", "Input"],
     [
@@ -116,6 +129,13 @@ export function Settings() {
               }}
             />
           </div>
+        </Panel>
+        <Panel>
+          <h2>{t("ai_index")}</h2>
+          <p className="muted small">{t("ai_index_hint")}</p>
+          <Button variant="outline" disabled={busy} onClick={indexNotes}>
+            {t("ai_index")}
+          </Button>
         </Panel>
         <Panel>
           <h2>{t("shortcuts")}</h2>

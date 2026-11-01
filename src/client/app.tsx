@@ -244,7 +244,7 @@ function Shell() {
       content = <Timeline query={query} />;
       break;
     case "note":
-      content = <NotePage id={Number(parts[1])} />;
+      content = <NotePage key={parts[1]} id={Number(parts[1])} />;
       break;
     case "spark":
       content = <Spark />;
